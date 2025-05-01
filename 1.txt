@@ -1,0 +1,5 @@
+int main() {
+ int x:=1,a:=2,s:=3,d:=4,f,g:=6,h,j:=11;
+ x := (a+s)*d-f/g%h+j;
+ return 0;
+}
