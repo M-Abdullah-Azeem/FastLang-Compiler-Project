@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+int lstart, ltrue, lfalse, lend;  //Variables for controlling the control structures (if-else and while).
 char curType[10];
 int tempCount = 0;
 extern int yylineno;
@@ -74,6 +75,9 @@ int yylex();
 %token LT GT LE GE EQ NE
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
 
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
+
 %left OR
 %left AND
 %left EQ NE LT GT LE GE
@@ -82,7 +86,7 @@ int yylex();
 %right NOT
 %right UMINUS
 
-%type <stringVal> base_type idInit return_type
+%type <stringVal> base_type idInit return_type AddOp MultOp RelOp RelExpr
 %type <expr> expression E T U F
 
 %%
@@ -137,6 +141,7 @@ VarDeclaration:
     base_type[ret] {
         strcpy(curType, $ret);
     } idList SEMICOLON
+    |
     ;
 
 idList:
@@ -171,12 +176,33 @@ expr_stmt:
     ;
 
 selection_stmt:
-    IF LPAREN expression RPAREN statement ELSE statement
-    | IF LPAREN expression RPAREN statement
+    IF LPAREN expression RPAREN {
+        ltrue = tempCount++;
+        lfalse = tempCount++;
+        fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $3.place, ltrue, lfalse, ltrue);
+    } FollowIf
     ;
 
+FollowIf:
+    statement {
+        fprintf(out, "L%d:\n", lfalse);
+    }
+    | statement ELSE {
+        lend = tempCount++;
+        fprintf(out, "goto L%d\nL%d:\n", lend, lfalse);
+    } statement {
+        fprintf(out, "L%d:\n", lend);
+    }
+
 iteration_stmt:
-    WHILE LPAREN expression RPAREN statement
+    WHILE LPAREN expression RPAREN {
+        lstart = tempCount++;
+        ltrue = tempCount++;
+        lfalse = tempCount++;
+        fprintf(out, "L%d:\nif %s goto L%d\ngoto L%d\nL%d:\n", lstart, $3.place, ltrue, lfalse, ltrue);
+    } statement {
+        fprintf(out, "goto L%d\nL%d:\n", lstart, lfalse);
+    }
     ;
 
 return_stmt:
@@ -196,46 +222,61 @@ io_stmt:
     }
     ;
 
+
+
 expression:
-    E { $$ = $1; }
+    expression OR AndExpr | AndExpr
+    ;
+
+AndExpr:
+    AndExpr AND NotExpr | NotExpr
+    ;
+
+NotExpr:
+    NOT NotExpr | RelExpr
+    ;
+
+RelExpr:
+    E RelOp[op] E {
+        char buf[1024]="";
+        strcat(buf, $1.place);
+        strcat(buf, $op);
+        strcat(buf, $3.place);
+        $$ = buf;
+    }
+    | E
+    ;
+
+RelOp[op]:
+    LT {$$ = "<";} | GT {$$ = ">";} | EQ {$$ = "==";} | NE {$$ = "!=";} | GE {$$ = ">=";} | LE {$$ = "<=";}
     ;
 
 E:
-    E PLUS T {
+    E AddOp[op] T {
         checkType($1.type, $3.type);
         char* t = newTemp();
-        fprintf(out, "%s := %s + %s\n", t, $1.place, $3.place);
-        $$ = (typeof($$)){ .place = t, .type = $1.type };
-    }
-    | E MINUS T {
-        checkType($1.type, $3.type);
-        char* t = newTemp();
-        fprintf(out, "%s := %s - %s\n", t, $1.place, $3.place);
+        fprintf(out, "%s := %s %s %s\n", t, $1.place, $op, $3.place);
         $$ = (typeof($$)){ .place = t, .type = $1.type };
     }
     | T { $$ = $1; }
     ;
 
+AddOp[op]:
+    PLUS {$$ = "+";} | MINUS {$$ = "-";}
+    ;
+
 T:
-    T TIMES U {
+    T MultOp[op] U {
         checkType($1.type, $3.type);
         char* t = newTemp();
-        fprintf(out, "%s := %s * %s\n", t, $1.place, $3.place);
-        $$ = (typeof($$)){ .place = t, .type = $1.type };
-    }
-    | T DIVIDE U {
-        checkType($1.type, $3.type);
-        char* t = newTemp();
-        fprintf(out, "%s := %s / %s\n", t, $1.place, $3.place);
-        $$ = (typeof($$)){ .place = t, .type = $1.type };
-    }
-    | T MOD U {
-        checkType($1.type, $3.type);
-        char* t = newTemp();
-        fprintf(out, "%s := %s %% %s\n", t, $1.place, $3.place);
+        fprintf(out, "%s := %s %s %s\n", t, $1.place, $op, $3.place);
         $$ = (typeof($$)){ .place = t, .type = $1.type };
     }
     | U { $$ = $1; }
+    ;
+
+MultOp[op]:
+    TIMES {$$ = "*";} | DIVIDE {$$ = "/";} | MOD {$$ = "%";}
     ;
 
 U:

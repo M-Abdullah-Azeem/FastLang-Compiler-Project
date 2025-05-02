@@ -1,14 +1,10 @@
-x := 1
-a := 2
-s := 3
-d := 4
-g := 6
-j := 11
-t0 := a + s
-t1 := t0 * d
-t2 := f / g
-t3 := t2 % h
-t4 := t1 - t3
-t5 := t4 + j
-x := t5
+i := 0
+L0:
+if i<=5 goto L1
+goto L2
+L1:
+t3 := i + 1
+i := t3
+goto L0
+L2:
 return 0
