@@ -89,11 +89,12 @@ extern int yydebug;
     RBRACE = 290,                  /* RBRACE  */
     SEMICOLON = 291,               /* SEMICOLON  */
     COMMA = 292,                   /* COMMA  */
-    LOWER_THAN_ELSE = 293,         /* LOWER_THAN_ELSE  */
-    OR = 294,                      /* OR  */
-    AND = 295,                     /* AND  */
-    NOT = 296,                     /* NOT  */
-    UMINUS = 297                   /* UMINUS  */
+    OR = 293,                      /* OR  */
+    AND = 294,                     /* AND  */
+    NOT = 295,                     /* NOT  */
+    UMINUS = 296,                  /* UMINUS  */
+    LOWER = 297,                   /* LOWER  */
+    HIGHER = 298                   /* HIGHER  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -112,7 +113,7 @@ union YYSTYPE
         char* type;
     } expr;
 
-#line 116 "fastLang.tab.h"
+#line 117 "fastLang.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

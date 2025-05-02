@@ -1,7 +1,13 @@
 int main(){
     int x:=6, y;
     y:=2;
-    if(x) {
-        y := 1;
+    if(x+y > 2 and x < 4 or x == 2) {
+        if (x <= 2) {
+            y := 1;
+        } else {
+            x:=0;
+        }
+    } else {
+        y:=0;
     }
 }

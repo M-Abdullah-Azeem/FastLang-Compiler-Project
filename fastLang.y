@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-int lstart, ltrue, lfalse, lend;  //Variables for controlling the control structures (if-else and while).
+int lstart=-1, ltrue=-1, lfalse=-1, lend=-1;  //Variables for controlling the control structures (if-else and while).
 char curType[10];
-int tempCount = 0;
+int tempCount = 1, labelCount = 1;
 extern int yylineno;
 FILE *out;
 
@@ -75,8 +75,6 @@ int yylex();
 %token LT GT LE GE EQ NE
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON COMMA
 
-%nonassoc LOWER_THAN_ELSE
-%nonassoc ELSE
 
 %left OR
 %left AND
@@ -86,8 +84,12 @@ int yylex();
 %right NOT
 %right UMINUS
 
-%type <stringVal> base_type idInit return_type AddOp MultOp RelOp RelExpr
+%type <stringVal> base_type idInit return_type AddOp MultOp RelOp RelExpr AndExpr NotExpr
 %type <expr> expression E T U F
+%type <intVal> M
+
+%nonassoc LOWER
+%nonassoc HIGHER
 
 %%
 program:
@@ -176,32 +178,40 @@ expr_stmt:
     ;
 
 selection_stmt:
-    IF LPAREN expression RPAREN {
-        ltrue = tempCount++;
-        lfalse = tempCount++;
-        fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $3.place, ltrue, lfalse, ltrue);
-    } FollowIf
+    IF LPAREN M[trueLabel] M[falseLabel] %prec HIGHER {
+        ltrue = $trueLabel;
+        lfalse = $falseLabel;
+    } expression[exp] RPAREN {
+        fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $exp.place, $trueLabel, $falseLabel, $trueLabel);
+    } statement M[endLabel] ELSE {
+        fprintf(out, "goto L%d\nL%d:\n", $endLabel, $falseLabel);
+    } statement {
+        fprintf(out, "L%d:\n", $endLabel);
+    }
+    | IF LPAREN M[trueLabel] M[falseLabel] %prec HIGHER {
+        ltrue = $trueLabel;
+        lfalse = $falseLabel;
+    } expression[exp] RPAREN {
+        fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $exp.place, $trueLabel, $falseLabel, $trueLabel);
+    } statement {
+        fprintf(out, "L%d:\n", $falseLabel);
+    }
     ;
 
-FollowIf:
-    statement {
-        fprintf(out, "L%d:\n", lfalse);
-    }
-    | statement ELSE {
-        lend = tempCount++;
-        fprintf(out, "goto L%d\nL%d:\n", lend, lfalse);
-    } statement {
-        fprintf(out, "L%d:\n", lend);
-    }
+M:
+    { $$ = labelCount++; }
+    ;
 
 iteration_stmt:
-    WHILE LPAREN expression RPAREN {
-        lstart = tempCount++;
-        ltrue = tempCount++;
-        lfalse = tempCount++;
-        fprintf(out, "L%d:\nif %s goto L%d\ngoto L%d\nL%d:\n", lstart, $3.place, ltrue, lfalse, ltrue);
+    WHILE M[startLabel] {
+        fprintf(out, "L%d:\n", $startLabel);
+    } LPAREN M[trueLabel] M[falseLabel] {
+        ltrue = $trueLabel;
+        lfalse = $falseLabel;
+    } expression[exp] RPAREN {
+        fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $exp.place, $trueLabel, $falseLabel, $trueLabel);
     } statement {
-        fprintf(out, "goto L%d\nL%d:\n", lstart, lfalse);
+        fprintf(out, "goto L%d\nL%d:\n", $startLabel, $falseLabel);
     }
     ;
 
@@ -225,11 +235,16 @@ io_stmt:
 
 
 expression:
-    expression OR AndExpr | AndExpr
+    AndExpr OR {
+        fprintf(out, "if %s goto L%d\n", $1, ltrue);
+    } expression
+    | AndExpr
     ;
 
 AndExpr:
-    AndExpr AND NotExpr | NotExpr
+    AndExpr M[trueLabel] {
+        fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $1, $trueLabel, lfalse, $trueLabel);
+    } AND NotExpr | NotExpr
     ;
 
 NotExpr:
