@@ -112,8 +112,12 @@ union YYSTYPE
         char* place;
         char* type;
     } expr;
+    struct {
+        int ltrue;
+        int lfalse;
+    } ListVal;
 
-#line 117 "fastLang.tab.h"
+#line 121 "fastLang.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

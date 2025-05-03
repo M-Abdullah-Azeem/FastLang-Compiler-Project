@@ -64,6 +64,10 @@ int yylex();
         char* place;
         char* type;
     } expr;
+    struct {
+        int ltrue;
+        int lfalse;
+    } ListVal;
 }
 
 %token <intVal> INT_LITERAL BOOL_LITERAL
@@ -87,6 +91,7 @@ int yylex();
 %type <stringVal> base_type idInit return_type AddOp MultOp RelOp RelExpr AndExpr NotExpr
 %type <expr> expression E T U F
 %type <intVal> M
+%type <ListVal> N selection_stmt
 
 %nonassoc LOWER
 %nonassoc HIGHER
@@ -178,25 +183,33 @@ expr_stmt:
     ;
 
 selection_stmt:
-    IF LPAREN M[trueLabel] M[falseLabel] %prec HIGHER {
+    IF LPAREN N[lList] M[trueLabel] M[falseLabel] {
+        if(ltrue != -1) $lList.ltrue = ltrue;
+        if(lfalse != -1) $lList.lfalse = lfalse;
         ltrue = $trueLabel;
         lfalse = $falseLabel;
     } expression[exp] RPAREN {
         fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $exp.place, $trueLabel, $falseLabel, $trueLabel);
-    } statement M[endLabel] ELSE {
-        fprintf(out, "goto L%d\nL%d:\n", $endLabel, $falseLabel);
+    } statement FollowIf {
+        if($lList.ltrue != -1) ltrue = $lList.ltrue;
+        if($lList.lfalse != -1) lfalse = $lList.lfalse;
+    }
+    ;
+FollowIf:
+    ELSE M[endLabel] {
+        fprintf(out, "goto L%d\nL%d:\n", $endLabel, lfalse);
     } statement {
         fprintf(out, "L%d:\n", $endLabel);
     }
-    | IF LPAREN M[trueLabel] M[falseLabel] %prec HIGHER {
-        ltrue = $trueLabel;
-        lfalse = $falseLabel;
-    } expression[exp] RPAREN {
-        fprintf(out, "if %s goto L%d\ngoto L%d\nL%d:\n", $exp.place, $trueLabel, $falseLabel, $trueLabel);
-    } statement {
-        fprintf(out, "L%d:\n", $falseLabel);
+    | {
+        fprintf(out, "L%d:\n", lfalse);
     }
-    ;
+
+N: 
+    {
+        $$.ltrue = -1;
+        $$.lfalse = -1;
+    }
 
 M:
     { $$ = labelCount++; }
