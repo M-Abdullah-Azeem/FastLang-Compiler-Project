@@ -6,7 +6,7 @@
 
 int lstart=-1, ltrue=-1, lfalse=-1, lend=-1;  //Variables for controlling the control structures (if-else and while).
 char curType[10];
-int tempCount = 1, labelCount = 1;
+int tempCount = 1, labelCount = 1, argCount = 0, paramCount = 0;
 extern int yylineno;
 FILE *out;
 
@@ -14,6 +14,7 @@ FILE *out;
 typedef struct {
     char name[64];
     char type[10];
+    int argc;
 } Symbol;
 
 Symbol symtab[100];
@@ -34,6 +35,7 @@ void addSymbol(const char* name, const char* type) {
     }
     strcpy(symtab[symCount].name, name);
     strcpy(symtab[symCount].type, type);
+    symtab[symCount].argc = paramCount;
     symCount++;
 }
 
@@ -49,6 +51,17 @@ void checkType(const char* lhs, const char* rhs) {
     if (strcmp(lhs, rhs) != 0) {
         fprintf(stderr, "Semantic Error at line %d: Type mismatch (%s vs %s)\n", yylineno, lhs, rhs);
         exit(1);
+    }
+}
+
+void checkArgCount(const char* name, int c) {
+    for (int i = 0; i < symCount; ++i) {
+        if (strcmp(symtab[i].name, name) == 0) {
+            if(symtab[i].argc != c) {
+                fprintf(stderr, "Semantic Error at line %d: Function (%s) Expected Arguement Count: %d, Recieved: %d\n", yylineno, name, symtab[i].argc, c);
+                exit(1);
+            }
+        }
     }
 }
 
@@ -89,7 +102,7 @@ int yylex();
 %right UMINUS
 
 %type <stringVal> base_type idInit return_type AddOp MultOp RelOp RelExpr AndExpr NotExpr
-%type <expr> expression E T U F
+%type <expr> expression E T U F function_call
 %type <intVal> M
 %type <ListVal> N selection_stmt
 
@@ -107,7 +120,12 @@ function_declarations:
     ;
 
 function_decl:
-    return_type IDENTIFIER LPAREN parameters RPAREN compound_stmt
+    return_type IDENTIFIER LPAREN parameters RPAREN {
+        fprintf(out, "%s: //User Defined Function \n", $2);
+    } compound_stmt {
+        addSymbol($2, $1);
+        paramCount = 0;
+    }
     ;
 
 return_type:
@@ -128,8 +146,12 @@ parameters:
     ;
 
 parameter_list:
-    parameter
-    | parameter_list COMMA parameter
+    parameter {
+        paramCount++;
+    }
+    | parameter_list COMMA parameter {
+        paramCount++;
+    }
     ;
 
 parameter:
@@ -137,7 +159,10 @@ parameter:
     ;
 
 main_function:
-    INT MAIN LPAREN RPAREN compound_stmt
+    INT MAIN LPAREN RPAREN {
+        fprintf(out, "main: //Main Function \n");
+        addSymbol("main", "function");
+    } compound_stmt
     ;
 
 compound_stmt:
@@ -173,7 +198,7 @@ stmt_list:
     ;
 
 statement:
-    expr_stmt | compound_stmt | selection_stmt | iteration_stmt | return_stmt | io_stmt;
+    expr_stmt | compound_stmt | selection_stmt | iteration_stmt | return_stmt | io_stmt | function_call;
 
 expr_stmt:
     IDENTIFIER ASSIGN expression SEMICOLON {
@@ -195,6 +220,7 @@ selection_stmt:
         if($lList.lfalse != -1) lfalse = $lList.lfalse;
     }
     ;
+
 FollowIf:
     ELSE M[endLabel] {
         fprintf(out, "goto L%d\nL%d:\n", $endLabel, lfalse);
@@ -234,9 +260,8 @@ return_stmt:
     ;
 
 io_stmt:
-    PRINT LPAREN expression RPAREN SEMICOLON {
-        fprintf(out, "param %s\n", $3.place);
-        fprintf(out, "call print, 1\n");
+    PRINT LPAREN arguementList RPAREN SEMICOLON {
+        fprintf(out, "Call print, %d\n", argCount);
     }
     | SCAN LPAREN IDENTIFIER RPAREN SEMICOLON {
         getType($3);
@@ -343,7 +368,28 @@ F:
         $$ = (typeof($$)){ .place = $1, .type = (char*)getType($1) };
     }
     | LPAREN expression RPAREN { $$ = $2; }
+    | function_call {$$=$1;}
     ;
+
+function_call:
+    IDENTIFIER LPAREN arguementList RPAREN SEMICOLON {
+        char buf[20] = "";
+        checkArgCount($1, argCount);
+        fprintf(out, "Call %s %d\n", $1, argCount);
+        argCount = 0;
+        
+        $$ = (typeof($$)){ .place = "return_value", .type = (char*)getType($1) };
+    }
+    ;
+
+arguementList:
+    expression COMMA {
+        argCount++;
+        fprintf(out, "param %s\n", $1.place);
+    } arguementList | expression {
+        argCount++;
+        fprintf(out, "param %s\n", $1.place);
+    }
 
 %%
 

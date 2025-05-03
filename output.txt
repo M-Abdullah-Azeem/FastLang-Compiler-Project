@@ -1,23 +1,5 @@
-x := 6
-y := 2
+add: //User Defined Function 
 t1 := x + y
-if t1>2 goto L3
-goto L2
-L3:
-if x<4 goto L1
-if x==2 goto L1
-goto L2
-L1:
-if x<=2 goto L4
-goto L5
-L4:
-t2 := -1
-y := t2
-goto L6
-L5:
-y := 1
-L6:
-goto L7
-L2:
-y := 2
-L7:
+return t1
+main: //Main Function 
+param a
