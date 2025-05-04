@@ -7,4 +7,5 @@ int main(){
         else
             print(y);
     }
+    return 0;
 }

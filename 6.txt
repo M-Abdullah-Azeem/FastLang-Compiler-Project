@@ -1,6 +1,6 @@
 int main() {
     string greeting;
-    greeting := "Hello, World!";
+    greeting := "Hello, World!" + "HEllo";
     if(greeting == "Hello, World|")
         return 0;
     else
