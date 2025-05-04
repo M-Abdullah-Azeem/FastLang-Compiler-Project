@@ -1,0 +1,8 @@
+int main() {
+    string greeting;
+    greeting := "Hello, World!";
+    if(greeting == "Hello, World|")
+        return 0;
+    else
+        return 1;
+}

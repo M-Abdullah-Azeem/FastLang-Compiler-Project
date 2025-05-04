@@ -103,7 +103,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 72 "fastLang.y"
+#line 79 "fastLang.y"
 
     int intVal;
     char charVal;

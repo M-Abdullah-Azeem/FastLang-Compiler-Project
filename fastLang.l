@@ -59,7 +59,7 @@ CHAR        \'([^\\\']|\\.)\'
 "}"              { return RBRACE; }
 
 "//".*           ; // Ignore single-line comments
-"/"([^]|\+[^/])\+"/"    ; // Ignore multi-line comments
+"/*"([^*]|\*+[^*/])*"*/"    ; // Ignore multi-line comments
 
 \n       {yylineno++;}
 [ \t\r]+       ;  // Ignore whitespace

@@ -1,7 +1,33 @@
 int add(int x, int y) {
-    return x+y;
+    int c;
+    c := x + y;
+    int d := c;
+    return d;
+}
+int mul(int x, int y) {
+    return x*y;
+}
+int factorial(int n) {
+    int result;
+    result := 0;
+    while(n>0) {
+        result := result * n;
+        n := n - 1;
+    }
+    return result;
 }
 int main() {
-    int a, b, c, res;
-    add(a);
+    int x, y, c, res, fact;
+    fact := factorial(x);
+    print(res);
+    res := mul(x,y);
+    print(res);
+    if(fact > 100) {
+        /* this is a multi line comment
+        spanning multiple lines */
+        return 1;
+    }else {
+        //this is a single line comment
+        return 0;
+    }
 }
