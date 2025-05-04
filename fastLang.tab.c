@@ -1871,7 +1871,7 @@ yyreduce:
 #line 413 "fastLang.y"
                      {
         char* buf = malloc(1024);
-        sprintf(buf, "\"%s\"", (yyvsp[0].stringVal));
+        sprintf(buf, "%s", (yyvsp[0].stringVal));
         (yyval.expr) = (typeof((yyval.expr))){ .place = buf, .type = "string" };
     }
 #line 1878 "fastLang.tab.c"

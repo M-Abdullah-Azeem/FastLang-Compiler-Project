@@ -412,7 +412,7 @@ F:
     }
     | STRING_LITERAL {
         char* buf = malloc(1024);
-        sprintf(buf, "\"%s\"", $1);
+        sprintf(buf, "%s", $1);
         $$ = (typeof($$)){ .place = buf, .type = "string" };
     }
     | IDENTIFIER {
