@@ -28,6 +28,7 @@ int main() {
         return 1;
     }else {
         //this is a single line comment
-        return;
+        return 0;
     }
+    return 0;
 }

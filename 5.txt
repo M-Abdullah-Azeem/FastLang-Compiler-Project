@@ -10,7 +10,7 @@ int main() {
 
     print(name);
     print(age);
-    if(age >= 18) {
+    if(age >= "18") {
         print(more);
     } else {
         print(less);

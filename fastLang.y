@@ -5,7 +5,7 @@
 #include <string.h>
 
 int lstart=-1, ltrue=-1, lfalse=-1, lend=-1;  //Variables for controlling the control structures (if-else and while).
-char curType[10], typeChecker[10];
+char funcType[10], curType[10];
 int tempCount = 1, labelCount = 1, argCount = 0, paramCount = 0, globalScope = 0, funcScope = 1, notCheck = 0;
 extern int yylineno;
 FILE *out;
@@ -28,7 +28,7 @@ char* newTemp() {
 }
 
 void checkReturnType(const char* lhs, const char* rhs) {
-    if(lhs == rhs){
+    if(strcmp(lhs,rhs) != 0) {
         fprintf(stderr, "Semantic Error at line %d: Must return a value of type (%s)\n", yylineno, lhs);
         exit(1);
     }
@@ -51,7 +51,7 @@ void addSymbol(const char* name, const char* type) {
 }
 void checkCompatibility(const char* lhs, const char* rhs) {
     if (strcmp(lhs, rhs) != 0) {
-        fprintf(stderr, "Semantic Error at line %d: Arithmetic Operations are only compatible with type int\n", yylineno);
+        fprintf(stderr, "Semantic Error at line %d: Operation not compatible with types (%s and %s).\n", yylineno, lhs, rhs);
         exit(1);
     }
 }
@@ -78,8 +78,6 @@ void checkArgCount(const char* name, int c) {
                 fprintf(stderr, "Semantic Error at line %d: Function (%s) Expected Arguement Count: %d, Recieved: %d\n", yylineno, name, symtab[i].argc, c);
                 exit(1);
             }
-            else {
-                printf("%s %d\n", name, symtab[i].scope);            }
         }
     }
 }
@@ -120,7 +118,7 @@ int yylex();
 %right NOT
 %right UMINUS
 
-%type <stringVal> return_stmt compound_stmt base_type idInit return_type AddOp MultOp RelOp 
+%type <stringVal> return_stmt function_body base_type idInit return_type AddOp MultOp RelOp 
 %type <expr> expression E T U F function_call RelExpr AndExpr NotExpr
 %type <intVal> M
 %type <ListVal> N selection_stmt
@@ -142,14 +140,20 @@ function_declarations:
 
 function_decl:
     return_type[type] IDENTIFIER[id] LPAREN parameters RPAREN {
-        strcpy(typeChecker, $type);
+        strcpy(funcType,$type);
         fprintf(out, "%s: //User Defined Function \n", $2);
-    } compound_stmt[type2] {
+    } function_body[type2] {
         checkReturnType($type, $type2);
         globalScope = 1;
-        addSymbol($id, typeChecker);
+        addSymbol($id, $type);
         globalScope = 0;
         paramCount = 0;
+    }
+    ;
+
+function_body:
+    LBRACE stmt_list return_stmt[type] RBRACE {
+        $$=$type;
     }
     ;
 
@@ -189,18 +193,17 @@ parameter:
 
 main_function:
     INT MAIN {
+        strcpy(funcType, "int");
         globalScope = 0;
     } LPAREN RPAREN {
         fprintf(out, "main: //Main Function \n");
-        addSymbol("main", "function");
-    } compound_stmt
+    } function_body[type] {
+        checkReturnType("int", $type);
+    }
     ;
 
 compound_stmt:
-    LBRACE stmt_list return_stmt[type] RBRACE {
-        $$=$type;
-    }
-    | LBRACE stmt_list RBRACE
+    LBRACE stmt_list RBRACE
     ;
 
 VarDeclaration:
@@ -232,7 +235,9 @@ stmt_list:
     ;
 
 statement:
-    VarDeclaration |expr_stmt | compound_stmt | selection_stmt | iteration_stmt | io_stmt;
+    VarDeclaration |expr_stmt | compound_stmt | selection_stmt | iteration_stmt | io_stmt | return_stmt[type] {
+        checkReturnType(funcType, $type);
+    };
 
 expr_stmt:
     IDENTIFIER ASSIGN expression SEMICOLON {
@@ -365,6 +370,7 @@ NotExpr:
 
 RelExpr:
     E RelOp[op] E {
+        checkCompatibility($1.type, $3.type);
         char buf[1024];
         sprintf(buf, "%s %s %s", $1.place, $op, $3.place);
         $$ = (typeof($$)){ .place = buf, .type = "bool" };
@@ -402,7 +408,9 @@ T:
         fprintf(out, "%s := %s %s %s\n", t, $1.place, $op, $3.place);
         $$ = (typeof($$)){ .place = t, .type = $1.type };
     }
-    | U { $$ = $1; }
+    | U { 
+        $$ = (typeof($$)){ .place = $1.place, .type = $1.type };
+     }
     ;
 
 MultOp[op]:

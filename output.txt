@@ -1,41 +1,11 @@
-add: //User Defined Function 
-t1 := x + y
-c := t1
-d := c
-return d
-mul: //User Defined Function 
-t2 := x * y
-return t2
-factorial: //User Defined Function 
-result := 0
-L1:
-if n > 0 goto L2
-goto L3
-L2:
-t3 := result * n
-result := t3
-t4 := n - 1
-n := t4
-goto L1
-L3:
-return result
 main: //Main Function 
-param x
-Call factorial, 1
-fact := return_value
-param res
+less := "You are a minor"
+more := "You are an adult"
+param name
+call scan, 1
+param age
+call scan, 1
+param name
 Call print, 1
-param x
-param y
-Call mul, 2
-res := return_value
-param res
+param age
 Call print, 1
-if fact > 100 goto L4
-goto L5
-L4:
-return 1
-goto L6
-L5:
-return
-L6:
